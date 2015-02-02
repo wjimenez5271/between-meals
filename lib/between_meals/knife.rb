@@ -1,13 +1,13 @@
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-present Facebook
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,13 +31,14 @@ module BetweenMeals
       @user = opts[:user] || ENV['USER']
       @home = opts[:home] || ENV['HOME']
       # make sure people can pass in false :)
-      @ssl = opts[:ssl].nil? ? true : opts[:ssl] 
+      @ssl = opts[:ssl].nil? ? true : opts[:ssl]
       @host = opts[:host] || 'localhost'
       @port = opts[:port] || 4000
       @config = opts[:config] ||
         "#{@home}/.chef/knife-#{@user}-taste-tester.rb"
       @knife = opts[:bin] || 'knife'
       @berks = opts[:berks_bin] || 'berks'
+      @berks_force = opts[:berks_force] || false
       @pem = opts[:pem] ||
         "#{@home}/.chef/#{@user}-taste-tester.pem"
       @role_dir = opts[:role_dir]
@@ -75,11 +76,16 @@ module BetweenMeals
     end
 
     def berks_cookbook_upload_all
+      if @berks_force do
+        cmd_opts = '--force'
+      else
+        cmd_opts = ''
+      end
       @cookbook_dirs.each do |path|
         cookbooks = Dir["#{path}/*"].select { |o| File.directory?(o) }
         cookbooks.each do |cb|
           @logger.warn("Running berkshelf on cookbook: #{cb}")
-          exec!("cd #{path}/#{cb} && #{@berks} install && #{@berks} upload",
+          exec!("cd #{path}/#{cb} && #{@berks} install && #{@berks} upload #{cmd_opts}",
                 @logger)
         end
       end
@@ -96,11 +102,16 @@ module BetweenMeals
       # cookbooks: array
       # cookbook_paths: array
       if cookbooks.any?
+        if @berks_force do
+          cmd_opts = '--force'
+        else
+          cmd_opts = ''
+        end
         @cookbook_dirs.each do |path|
           cookbooks.each do |cb|
             next unless File.exists?("#{path}/#{cb}")
             @logger.warn("Running berkshelf on cookbook: #{cb}")
-            exec!("cd #{path}/#{cb} && #{@berks} update && #{@berks} upload",
+            exec!("cd #{path}/#{cb} && #{@berks} update && #{@berks} upload #{cmd_opts}",
               @logger)
           end
         end
